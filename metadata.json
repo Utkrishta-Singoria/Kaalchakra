@@ -1,8 +1,6 @@
 {
-  "name": "Solution Architect",
-  "description": "Streamline your web application development process by transforming complex project requirements into functional, high-quality code.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "name": "Kaalchakra — Interactive Indian Civilization & History Game Suite",
+  "description": "An interactive historical game, virtual museum, AR coin/textbook scanner, and educator suite across 6 eras of Indian civilization (AICTE Problem Statement 26208).",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

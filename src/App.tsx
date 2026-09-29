@@ -1,113 +1,121 @@
 import React, { useState } from 'react';
 import {
-  ARCHITECTURE_PROJECTS,
-  ProjectArchitecture,
-} from './data/architectureProjects';
-import { TopologyDiagram } from './components/TopologyDiagram';
-import { StackEvaluator } from './components/StackEvaluator';
-import { RoadmapViewer } from './components/RoadmapViewer';
-import { RiskMatrixViewer } from './components/RiskMatrixViewer';
-import { CodeScaffoldViewer } from './components/CodeScaffoldViewer';
-import { LiveSolutionSimulator } from './components/LiveSolutionSimulator';
-import { CustomRequirementAnalyzer } from './components/CustomRequirementAnalyzer';
-import {
-  Network,
-  Layers,
-  Calendar,
-  AlertTriangle,
-  Code,
-  Play,
-  FileDown,
-  Sparkles,
-  CheckCircle2,
-} from 'lucide-react';
+  ArtifactCard,
+  ARTIFACTS,
+  ERAS,
+  EraId,
+  UI_STRINGS,
+} from './data/kaalchakraData';
+import { EraGames } from './components/EraGames';
+import { VirtualMuseum } from './components/VirtualMuseum';
+import { ArScannerLab } from './components/ArScannerLab';
+import { KingdomGuilds } from './components/KingdomGuilds';
+import { EducatorCmsView } from './components/EducatorCmsView';
+import { sound } from './utils/sound';
+import { Volume2, VolumeX } from 'lucide-react';
 
-type ActiveView =
-  | 'overview'
-  | 'topology'
-  | 'stack'
-  | 'roadmap'
-  | 'risks'
-  | 'code'
-  | 'simulator';
+type ActiveSection =
+  | 'expeditions'
+  | 'museum'
+  | 'scanner'
+  | 'kingdom'
+  | 'educator';
 
 export default function App() {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('aicte-26208');
-  const [activeView, setActiveView] = useState<ActiveView>('overview');
-  const [exportNotice, setExportNotice] = useState<boolean>(false);
+  const [activeSection, setActiveSection] = useState<ActiveSection>('expeditions');
+  const [selectedEraId, setSelectedEraId] = useState<EraId>('harappan');
+  const [lang, setLang] = useState<'en' | 'hi'>('en');
+  const [muted, setMuted] = useState<boolean>(false);
 
-  const currentProject =
-    ARCHITECTURE_PROJECTS.find((p) => p.id === selectedProjectId) ||
-    ARCHITECTURE_PROJECTS[0];
+  // Initialize unlocked artifacts with the starter set (1 per era)
+  const [unlockedArtifactIds, setUnlockedArtifactIds] = useState<string[]>(() =>
+    ARTIFACTS.filter((a) => a.unlockedByDefault).map((a) => a.id)
+  );
+  const [inspectedArtifact, setInspectedArtifact] = useState<ArtifactCard | null>(
+    null
+  );
+  const [recentUnlockNotice, setRecentUnlockNotice] = useState<string | null>(
+    null
+  );
 
-  const handleExportSpec = () => {
-    const spec = `# ${currentProject.title}
-Organization: ${currentProject.clientOrganization}
-Category: ${currentProject.category}
+  const activeEra = ERAS.find((e) => e.id === selectedEraId) || ERAS[0];
+  const t = UI_STRINGS[lang];
 
-## Executive Summary
-${currentProject.executiveSummary}
+  const handleUnlockArtifact = (artifactId: string) => {
+    setUnlockedArtifactIds((prev) => {
+      if (prev.includes(artifactId)) return prev;
+      const found = ARTIFACTS.find((a) => a.id === artifactId);
+      if (found) {
+        setRecentUnlockNotice(
+          `Unlocked in Virtual Museum: ${found.title} (${found.accessionNumber})`
+        );
+        setTimeout(() => setRecentUnlockNotice(null), 4500);
+      }
+      return [...prev, artifactId];
+    });
+  };
 
-## Key Constraints
-${currentProject.keyConstraints.map((c) => `- ${c}`).join('\n')}
+  const handleInspectArtifactFromEra = (artifact: ArtifactCard) => {
+    setInspectedArtifact(artifact);
+    setActiveSection('museum');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-## Recommended Stack
-${currentProject.recommendedStack.map((s) => `### ${s.layer}: ${s.choice}\nRationale: ${s.rationale}\nTrade-off: ${s.tradeOff}`).join('\n\n')}
-
-## Roadmap
-${currentProject.roadmap.map((r) => `Phase ${r.phaseNum}: ${r.name} (${r.duration})\nDeliverables: ${r.deliverables.join(', ')}`).join('\n\n')}
-`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(spec).catch(() => {});
+  const toggleAudio = () => {
+    const nextMuted = !muted;
+    sound.muted = nextMuted;
+    setMuted(nextMuted);
+    if (!nextMuted) {
+      sound.playTap(480);
     }
-    setExportNotice(true);
-    setTimeout(() => setExportNotice(false), 3000);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0F19] text-[#E2E8F0]">
+    <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-[#1C1917]">
       {/* =====================================================================
           STRICT 3-ZONE TOP BAR CONTRACT
-          Zone 1: Single text element Brand Wordmark
-          Zone 2: 4–6 text navigation links
-          Zone 3: 1–2 primary action controls
+          Zone 1: Single text element wordmark
+          Zone 2: 5 single-line text navigation links
+          Zone 3: 2 primary actions (Language toggle + Audio / Museum switch)
          ===================================================================== */}
-      <header className="sticky top-0 z-30 bg-[#0B0F19]/95 backdrop-blur-sm border-b border-slate-800 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4">
-        {/* Zone 1: Single text element wordmark */}
+      <header className="sticky top-0 z-30 bg-[#FBF9F5]/95 backdrop-blur-sm border-b border-stone-300 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4">
+        {/* Zone 1: Single text element Brand Wordmark */}
         <a
           href="#top"
           onClick={(e) => {
             e.preventDefault();
-            setActiveView('overview');
+            sound.playTap();
+            setActiveSection('expeditions');
           }}
-          className="text-xl sm:text-2xl font-display font-semibold tracking-tight text-white whitespace-nowrap"
+          className="text-xl sm:text-2xl font-display font-semibold tracking-tight text-stone-900 whitespace-nowrap"
         >
-          Solution Architect
+          Kaalchakra
         </a>
 
-        {/* Zone 2: Clean single-line text navigation links */}
+        {/* Zone 2: 5 clean text navigation links */}
         <nav
-          aria-label="Primary Architecture Navigation"
-          className="hidden xl:flex items-center gap-6 text-xs font-mono-tabular"
+          aria-label="Primary Navigation"
+          className="hidden md:flex items-center gap-6 text-sm font-medium text-stone-600"
         >
           {(
             [
-              { id: 'overview', label: 'Overview' },
-              { id: 'topology', label: 'C4 Topology' },
-              { id: 'stack', label: 'Tech Decisions' },
-              { id: 'roadmap', label: 'Roadmap (0–9)' },
-              { id: 'risks', label: 'Risk Pre-Mortem' },
-              { id: 'code', label: 'Code & Schema' },
-              { id: 'simulator', label: 'Live Testbed' },
+              { id: 'expeditions', label: t.navExpeditions },
+              { id: 'museum', label: `${t.navMuseum} (${unlockedArtifactIds.length}/${ARTIFACTS.length})` },
+              { id: 'scanner', label: t.navScanner },
+              { id: 'kingdom', label: t.navKingdom },
+              { id: 'educator', label: t.navEducator },
             ] as const
           ).map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveView(item.id)}
+              onClick={() => {
+                sound.playTap();
+                setActiveSection(item.id);
+              }}
               className={`py-1 transition-colors whitespace-nowrap border-b-2 ${
-                activeView === item.id
-                  ? 'border-sky-400 text-white font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                activeSection === item.id
+                  ? 'border-[#9A3412] text-stone-900 font-semibold'
+                  : 'border-transparent hover:text-stone-900'
               }`}
             >
               {item.label}
@@ -115,50 +123,50 @@ ${currentProject.roadmap.map((r) => `Phase ${r.phaseNum}: ${r.name} (${r.duratio
           ))}
         </nav>
 
-        {/* Zone 3: Primary Action Controls */}
+        {/* Zone 3: 2 Primary Actions */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <select
-            aria-label="Select Architecture Project"
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-mono-tabular rounded px-2.5 py-1.5 focus:outline-none focus:border-sky-500"
+          <button
+            onClick={toggleAudio}
+            aria-label={muted ? 'Unmute audio' : 'Mute audio'}
+            className="p-2 border border-stone-300 text-stone-700 hover:bg-stone-100 transition-colors"
+            title={muted ? 'Sound Muted' : 'Web Audio Active'}
           >
-            {ARCHITECTURE_PROJECTS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title.split('—')[0].trim()}
-              </option>
-            ))}
-          </select>
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
 
           <button
-            onClick={handleExportSpec}
-            className="px-3 py-1.5 text-xs font-semibold font-mono-tabular bg-sky-500 text-slate-950 hover:bg-sky-400 rounded transition-colors whitespace-nowrap flex items-center gap-1.5"
+            onClick={() => {
+              sound.playTap();
+              setLang((l) => (l === 'en' ? 'hi' : 'en'));
+            }}
+            className="px-3.5 py-1.5 text-xs font-semibold border border-stone-900 bg-stone-900 text-[#FBF9F5] hover:bg-stone-800 transition-colors whitespace-nowrap"
           >
-            <FileDown className="w-3.5 h-3.5" /> Export Architecture
+            {lang === 'en' ? 'हिन्दी / EN' : 'EN / हिन्दी'}
           </button>
         </div>
       </header>
 
-      {/* Subnav for Mobile/Tablet */}
-      <div className="xl:hidden flex overflow-x-auto border-b border-slate-800 bg-[#0F172A] px-4 py-2 gap-4 text-xs font-mono-tabular">
+      {/* Mobile Navigation Bar (Visible only on small viewports) */}
+      <div className="md:hidden flex overflow-x-auto border-b border-stone-300 bg-[#F5F1E8] px-4 py-2 gap-4 text-xs font-medium">
         {(
           [
-            { id: 'overview', label: 'Overview' },
-            { id: 'topology', label: 'C4 Topology' },
-            { id: 'stack', label: 'Tech Decisions' },
-            { id: 'roadmap', label: 'Roadmap' },
-            { id: 'risks', label: 'Risk Pre-Mortem' },
-            { id: 'code', label: 'Code & Schema' },
-            { id: 'simulator', label: 'Live Testbed' },
+            { id: 'expeditions', label: t.navExpeditions },
+            { id: 'museum', label: `${t.navMuseum} (${unlockedArtifactIds.length})` },
+            { id: 'scanner', label: t.navScanner },
+            { id: 'kingdom', label: t.navKingdom },
+            { id: 'educator', label: t.navEducator },
           ] as const
         ).map((item) => (
           <button
             key={item.id}
-            onClick={() => setActiveView(item.id)}
+            onClick={() => {
+              sound.playTap();
+              setActiveSection(item.id);
+            }}
             className={`py-1 whitespace-nowrap shrink-0 border-b-2 ${
-              activeView === item.id
-                ? 'border-sky-400 text-white font-semibold'
-                : 'border-transparent text-slate-400'
+              activeSection === item.id
+                ? 'border-[#9A3412] text-stone-900 font-semibold'
+                : 'border-transparent text-stone-600'
             }`}
           >
             {item.label}
@@ -166,113 +174,191 @@ ${currentProject.roadmap.map((r) => `Phase ${r.phaseNum}: ${r.name} (${r.duratio
         ))}
       </div>
 
-      {exportNotice && (
-        <div className="bg-emerald-950 border-b border-emerald-500/40 text-emerald-300 px-6 py-2 text-xs font-mono-tabular flex items-center justify-between">
-          <span>✓ Full Architecture Specification copied to clipboard in Markdown format.</span>
-          <span className="text-[10px] text-emerald-400">Ready for PRD / RFP attachments</span>
+      {/* Toast Notification for Newly Unlocked Museum Artifacts */}
+      {recentUnlockNotice && (
+        <div className="bg-emerald-900 text-white px-6 py-2.5 text-xs font-mono-tabular flex items-center justify-between">
+          <span>★ {recentUnlockNotice}</span>
+          <button
+            onClick={() => {
+              setActiveSection('museum');
+              setRecentUnlockNotice(null);
+            }}
+            className="underline font-sans font-semibold ml-4 whitespace-nowrap"
+          >
+            Open Virtual Museum →
+          </button>
         </div>
       )}
 
-      {/* Main Container */}
-      <main className="flex-1 w-full max-w-[1340px] mx-auto px-4 sm:px-8 py-8 space-y-8">
-        {/* Project Header Banner */}
-        <section className="bg-[#0F172A] border border-slate-800 rounded-xl p-6 lg:p-8 space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 border-b border-slate-800 pb-6">
-            <div className="space-y-2 max-w-3xl">
-              <div className="text-xs font-mono-tabular text-sky-400">
-                CLIENT / ORGANIZATION: {currentProject.clientOrganization.toUpperCase()} · CATEGORY: {currentProject.category.toUpperCase()}
+      {/* =====================================================================
+          MAIN VIEWPORT CONTAINER (1440px Desktop Presence)
+         ===================================================================== */}
+      <main className="flex-1 w-full max-w-[1320px] mx-auto px-4 sm:px-8 py-8 space-y-10">
+        {activeSection === 'expeditions' && (
+          <>
+            {/* Editorial Marquee & Core Kaalchakra Loop Banner */}
+            <section className="border-b border-stone-300 pb-8 space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                <div className="space-y-2 max-w-3xl">
+                  {/* Unboxed quiet metadata */}
+                  <div className="text-xs font-mono-tabular text-stone-500">
+                    AICTE PROBLEM STATEMENT ID 26208 · MIC-STUDENT INNOVATION · TOYS &amp; GAMES · NCERT CLASSES 6–10
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-display font-semibold text-stone-900 leading-[1.15]">
+                    Six Eras of Indian Civilization. Six Distinct Ways to Play, Reason &amp; Discover.
+                  </h1>
+                  <p className="text-sm sm:text-base text-stone-700 leading-relaxed pt-1">
+                    Rather than repeating the same quiz across different historical backdrops, Kaalchakra maps each era to its core historical identity—from engineering baked-brick drainage in Mohenjo-daro to deliberating in a Vedic Sabha, governing Mauryan provinces by Ashokan Edicts, calculating eclipses with Aryabhata, trading across Medieval kingdoms, and routing underground bulletins in the Freedom Struggle.
+                  </p>
+                </div>
+
+                {/* Quick Jump Actions */}
+                <div className="flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
+                  <button
+                    onClick={() => {
+                      sound.playTap();
+                      setActiveSection('scanner');
+                    }}
+                    className="px-4 py-2.5 text-xs font-semibold border border-stone-900 text-stone-900 hover:bg-stone-900 hover:text-white transition-colors whitespace-nowrap"
+                  >
+                    Launch AR Coin &amp; Textbook Scanner
+                  </button>
+                  <button
+                    onClick={() => {
+                      sound.playTap();
+                      setActiveSection('museum');
+                    }}
+                    className="px-4 py-2.5 text-xs font-semibold bg-[#9A3412] text-white hover:bg-[#7C2D12] transition-colors whitespace-nowrap"
+                  >
+                    Explore Virtual Museum ({unlockedArtifactIds.length}/{ARTIFACTS.length})
+                  </button>
+                </div>
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-semibold text-white">
-                {currentProject.title}
-              </h1>
-              <p className="text-sm text-slate-300 leading-relaxed pt-1">
-                {currentProject.tagline}
-              </p>
-            </div>
 
-            <div className="flex flex-col sm:items-end justify-center font-mono-tabular text-xs space-y-1">
-              <span className="text-slate-400">STATUS: ARCHITECTURE APPROVED</span>
-              <span className="text-emerald-400 font-semibold">● READY FOR IMPLEMENTATION</span>
-              <span className="text-slate-400">P99 SLA: &lt; 50ms</span>
-            </div>
-          </div>
+              {/* Kaalchakra Core Loop Strip (Page 4 of PDF 1) */}
+              <div className="bg-[#F5F1E8] border border-stone-300 p-4">
+                <div className="text-[11px] font-mono-tabular text-stone-500 uppercase tracking-wider mb-2">
+                  {t.loopHeader} · HISTORICAL REALITY → EVIDENCE → GAMEPLAY → LEARNING → ARTIFACT COLLECTION
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+                  {t.loopSteps.map((step, i) => (
+                    <div
+                      key={i}
+                      className="p-2.5 bg-[#FBF9F5] border border-stone-200 font-medium text-stone-800"
+                    >
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono-tabular text-slate-300 pt-2">
-            <div>
-              <span className="text-slate-500 block mb-1">ARCHITECTURAL CONSTRAINTS &amp; GUARDRAILS:</span>
-              <ul className="space-y-1 list-disc pl-4 text-slate-300">
-                {currentProject.keyConstraints.map((k, i) => (
-                  <li key={i}>{k}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <span className="text-slate-500 block mb-1">TARGET AUDIENCE &amp; HARDWARE ENVELOPE:</span>
-              <p className="text-slate-300 leading-relaxed font-sans">{currentProject.targetAudience}</p>
-            </div>
-          </div>
-        </section>
+            {/* 6-Era Selector Matrix (Highlighting Distinct Gameplay Style per Era) */}
+            <section aria-label="Select Historical Era" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-mono-tabular uppercase tracking-wider text-stone-600">
+                  Select Historical Era &amp; Gameplay Mode
+                </h2>
+                <span className="text-xs text-stone-500">
+                  Every era features a distinct core mechanic
+                </span>
+              </div>
 
-        {/* Dynamic Section Routing */}
-        {activeView === 'overview' && (
-          <div className="space-y-8">
-            <TopologyDiagram nodes={currentProject.nodes} />
-            <StackEvaluator stack={currentProject.recommendedStack} />
-            <LiveSolutionSimulator project={currentProject} />
-            <CustomRequirementAnalyzer
-              onSelectProject={(p) => setSelectedProjectId(p.id)}
-              allProjects={ARCHITECTURE_PROJECTS}
-            />
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                {ERAS.map((eraItem) => {
+                  const isSelected = eraItem.id === selectedEraId;
+                  const eraUnlockedCount = ARTIFACTS.filter(
+                    (a) => a.eraId === eraItem.id && unlockedArtifactIds.includes(a.id)
+                  ).length;
+
+                  return (
+                    <button
+                      key={eraItem.id}
+                      onClick={() => {
+                        sound.playTap(440);
+                        setSelectedEraId(eraItem.id);
+                      }}
+                      className={`p-4 text-left border transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-stone-900 text-[#FBF9F5] border-stone-900 shadow-sm'
+                          : 'bg-white text-stone-900 border-stone-300 hover:border-stone-600'
+                      }`}
+                    >
+                      <div>
+                        <div
+                          className={`text-[11px] font-mono-tabular ${
+                            isSelected ? 'text-stone-300' : 'text-stone-500'
+                          }`}
+                        >
+                          ERA {eraItem.index} · {eraItem.period.split(' ')[0]}
+                        </div>
+                        <div className="text-sm font-display font-semibold mt-1 leading-snug">
+                          {lang === 'hi' ? eraItem.nameHi : eraItem.name}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-2.5 border-t border-stone-300/30 flex items-center justify-between text-[11px] font-mono-tabular">
+                        <span
+                          className={
+                            isSelected ? 'text-amber-300 font-semibold' : 'text-[#9A3412] font-semibold'
+                          }
+                        >
+                          → {eraItem.gameplayVerb}
+                        </span>
+                        <span className={isSelected ? 'text-stone-300' : 'text-stone-500'}>
+                          {eraUnlockedCount}/3
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Active Era Interactive Gameplay Engine */}
+            <section>
+              <EraGames
+                era={activeEra}
+                lang={lang}
+                unlockedArtifactIds={unlockedArtifactIds}
+                onUnlockArtifact={handleUnlockArtifact}
+                onInspectArtifact={handleInspectArtifactFromEra}
+              />
+            </section>
+          </>
         )}
 
-        {activeView === 'topology' && (
-          <div className="space-y-8">
-            <TopologyDiagram nodes={currentProject.nodes} />
-          </div>
+        {activeSection === 'museum' && (
+          <VirtualMuseum
+            lang={lang}
+            unlockedArtifactIds={unlockedArtifactIds}
+            selectedArtifact={inspectedArtifact}
+            onSelectArtifact={setInspectedArtifact}
+            onUnlockArtifact={handleUnlockArtifact}
+          />
         )}
 
-        {activeView === 'stack' && (
-          <div className="space-y-8">
-            <StackEvaluator stack={currentProject.recommendedStack} />
-          </div>
+        {activeSection === 'scanner' && (
+          <ArScannerLab
+            onUnlockArtifact={handleUnlockArtifact}
+            onInspectArtifact={handleInspectArtifactFromEra}
+          />
         )}
 
-        {activeView === 'roadmap' && (
-          <div className="space-y-8">
-            <RoadmapViewer roadmap={currentProject.roadmap} />
-          </div>
-        )}
+        {activeSection === 'kingdom' && <KingdomGuilds />}
 
-        {activeView === 'risks' && (
-          <div className="space-y-8">
-            <RiskMatrixViewer risks={currentProject.risks} />
-          </div>
-        )}
-
-        {activeView === 'code' && (
-          <div className="space-y-8">
-            <CodeScaffoldViewer
-              files={currentProject.codeScaffolds}
-              databaseSchema={currentProject.databaseSchema}
-            />
-          </div>
-        )}
-
-        {activeView === 'simulator' && (
-          <div className="space-y-8">
-            <LiveSolutionSimulator project={currentProject} />
-          </div>
-        )}
+        {activeSection === 'educator' && <EducatorCmsView />}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 bg-[#090D16] px-4 sm:px-8 py-6 mt-12 text-xs font-mono-tabular text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <strong className="text-slate-300 font-sans">Solution Architect</strong> · Transforming Complex Project Briefs into Production Code
-        </div>
-        <div>
-          Compliance: ISO 27001 · India DPDP Act · W3C C4 Architecture Standards
+      {/* Quiet Curatorial Footer */}
+      <footer className="border-t border-stone-300 bg-[#F5F1E8] px-4 sm:px-8 py-6 mt-12">
+        <div className="max-w-[1320px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-stone-600">
+          <div>
+            <strong className="font-display text-stone-900">Kaalchakra</strong> · AICTE Problem Statement ID 26208 (MIC-Student Innovation · Toys &amp; Games)
+          </div>
+          <div className="font-mono-tabular">
+            Primary Sources: ASI · National Museum · NCERT (Classes 6–10) · RBI Monetary Museum
+          </div>
         </div>
       </footer>
     </div>
